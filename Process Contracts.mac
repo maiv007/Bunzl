@@ -90,7 +90,7 @@ Function LoadData(objLine, dataArray, columns, strInfo, vaMyArray, rows)
 		strInfo =   objLine.ReadLine
 		vaMyArray = Split(strInfo, ",")
 		For y = 0 to columns-1
-			dataArray(x, y) = Replace(vaMyArray(y)," ", "") 'REMOVE ANY BLANKS
+			dataArray(x, y) = vaMyArray(y)
 		Next
 		if x >= rows then exit do
 		x = x + 1
@@ -121,21 +121,21 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 	Do while x <= rows
 		
 		REM contract value assignments
-		location = dataArray(x,0)
-		rebatenumber = dataArray(x,1)
-		bunzlnumber = dataArray(x,2)
-		vendorpart = dataArray(x,3)
+		location = Replace(dataArray(x,0), " ", "")
+		rebatenumber = Replace(dataArray(x,1), " ", "")
+		bunzlnumber = Replace(dataArray(x,2), " ", "")
+		vendorpart = Replace(dataArray(x,3), " ", "")
 		vendordesc = dataArray(x,4)
-		optionD = dataArray(x,5)
-		option1 = dataArray(x,6)
-		option2 = dataArray(x,7)
-		price = dataArray(x,8)
-		effdate = dataArray(x,9)
-		expdate = dataArray(x,10)
-		vendornumber = dataArray(x,11)
-		contractnumber = dataArray(x,12)
-		optPending = dataArray(x,13)
-		optRemove = dataArray(x,14)
+		optionD = Replace(dataArray(x,5), " ", "")
+		option1 = Replace(dataArray(x,6), " ", "")
+		option2 = Replace(dataArray(x,7), " ", "")
+		price = Replace(dataArray(x,8), " ", "")
+		effdate = Replace(dataArray(x,9), " ", "")
+		expdate = Replace(dataArray(x,10), " ", "")
+		vendornumber = Replace(dataArray(x,11), " ", "")
+		contractnumber = Replace(dataArray(x,12), " ", "")
+		optPending = Replace(dataArray(x,13), " ", "")
+		optRemove = Replace(dataArray(x,14), " ", "")
 
 
 		REM This is to check and change to the required location.
@@ -198,7 +198,8 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 		autECLSession.autECLOIA.WaitForInputReady
 		autECLSession.autECLPS.SendKeys "[enter]"
 		autECLSession.autECLPS.Wait 100
-		
+		autECLSession.autECLOIA.WaitForAppAvailable
+
 		if StrComp(optRemove, "y") = 0 Or StrComp(optRemove, "Y") = 0 then
 			if StrComp(Replace(autECLSession.autECLPS.GetText(07, 008, 9), " ", ""), bunzlnumber) = 0 then		
 				Call removeRebateLine(location, rebatenumber, vendorpart, vendordesc, bunzlnumber, objFile)
@@ -272,7 +273,9 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 			end if
 		else
 			if StrComp(Replace(autECLSession.autECLPS.GetText(07, 008, 9), " ", ""), bunzlnumber) = 0  then
+				autECLSession.autECLPS.Wait 10
 				Call removeRebateLine_Simple()
+				autECLSession.autECLPS.Wait 50
 				Call addRebateLine(location, rebatenumber, bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
 				'if item comes back with a system message then item failed to add
 				if failCheck = 1 then
@@ -282,6 +285,7 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 				end if
 				failCheck = 0
 			else
+				autECLSession.autECLPS.Wait 50
 				Call addRebateLine(location, rebatenumber, bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
 				'if item comes back with a system message then item failed to add
 				if failCheck = 1 then
