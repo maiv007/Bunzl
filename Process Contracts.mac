@@ -38,16 +38,11 @@ sub main()
 	Call FindFileSize(rows, objLine, strInfo, tempString) 'calls function to calculate number of rows in CSV file
 	ReDim dataArray(rows, columns) 'redefine array based on CSV file size
 	
-		'******Create report file*********
+	'******Create report file*********
 	Set objFSO = CreateObject("Scripting.FileSystemObject")
 	Set objFile = objFSO.CreateTextFile(outFile, True)
 
-	objFile.Write "******AS400 MACRO SCRIPT REPORT******" & vbCrlf
-	objFile.Write "Script: POD Upload" & vbCrlf
-	objFile.Write "User: CNOABAJCA" & vbCrlf
-	objFile.Write "Run Date: " & date & vbCrlf
-	objFile.Write "------------------------------------" & vbCrlf
-	objFile.Write "LOCATION,REBATE NUMBER,CONTRACT NUMBER,AS400 BUNZL NUMBER,AS400 COST,AS400 VENDOR PART,VENDOR NUMBER,CSV BUNZL NUMBER,CSV COST ENTERED,CSV VENDOR PART,CSV VENDOR INFO,PENDING,SYSTEM NOTES" & vbCrlf
+	Call initializeReport(objFile)
 	
 	'******Load data in CSV file into array******
 	Call CreateFile(aFile, myFile, filePath, objLine) 'reloads in CSV files
@@ -55,11 +50,6 @@ sub main()
 	
 	'******Run AS400 macro program******
 	Call RunMacro(dataArray, rows, columns, objFile, reportNumber)
-	
-	objFile.Write "------------------------------------" & vbCrlf
-	objFile.Write "END REPORT" & vbCrlf
-	objFile.Close
-	
 end sub
 
 Function RndNumber(randomNumber, rnString)
@@ -108,10 +98,18 @@ Function LoadData(objLine, dataArray, columns, strInfo, vaMyArray, rows)
 	
 End function
 
+Function initializeReport(objFile)
+	objFile.Write "******AS400 MACRO SCRIPT REPORT******" & vbCrlf
+	objFile.Write "Script: POD Upload" & vbCrlf
+	objFile.Write "User: CNOABAJCA" & vbCrlf
+	objFile.Write "Run Date: " & date & vbCrlf
+	objFile.Write "------------------------------------" & vbCrlf
+	objFile.Write "LOCATION,REBATE NUMBER,CONTRACT NUMBER,AS400 BUNZL NUMBER,AS400 COST,AS400 VENDOR PART,VENDOR NUMBER,CSV BUNZL NUMBER,CSV COST ENTERED,CSV VENDOR PART,CSV VENDOR INFO,PENDING,SYSTEM NOTES" & vbCrlf
+End function
+
 Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 	Dim x, itemcheck, failCheck
 	Dim successfulItems, exceptionsItems
-
 	Dim location, rebatenumber, bunzlnumber, vendorpart, vendordesc, optionD, option1, option2
 	Dim price, effdate, expdate, vendornumber, contractnumber, optPending, optRemove
 
@@ -307,7 +305,7 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 	autECLSession.autECLPS.SendKeys "[pf3]"
 	autECLSession.autECLPS.Wait 50
 
-	Call MacroComplete(successfulItems, exceptionsItems, reportNumber)
+	Call MacroComplete(successfulItems, exceptionsItems, reportNumber, objFile)
 End function
 
 
@@ -577,7 +575,10 @@ Function removeRebateLine(location, rebatenumber, vendorpart, vendordesc, bunzln
 	autECLSession.autECLPS.Wait 10
 End function
 
-Function MacroComplete(successfulItems, exceptionsItems, reportNumber)
+Function MacroComplete(successfulItems, exceptionsItems, reportNumber, objFile)
+	objFile.Write "------------------------------------" & vbCrlf
+	objFile.Write "END REPORT" & vbCrlf
+	objFile.Close
 	MsgBox("Update Complete." & vbCrlf & "Successful lines processed: " & successfulItems & vbCrlf & "Exceptions lines found: " & exceptionsItems & vbCrlf & "Please refer to MSR report number " & reportNumber & ".")
 End function
 
