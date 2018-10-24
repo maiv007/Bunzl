@@ -14,7 +14,7 @@ main
 
 sub main()
 	'*******Variables*******
-	Dim aFile, myFile, filePath
+	Dim aFile, myFile, filePath, username
 	Dim vaMyArray, objLine, strInfo, x, y
 	Dim arraySize, rows, columns
 	Dim dataArray : dataArray = Array()
@@ -25,10 +25,11 @@ sub main()
 	Dim datevalue, randomNumber, rnString
 	'*******Declarations*******
 	columns = 12
+	username = "jbajcar"
 	Call RndNumber(randomNumber, rnString)
 	datevalue = Day(date)&Month(date)&Year(date)
-	filePath = "C:\Users\jbajcar\AppData\Roaming\IBM\Client Access\Emulator\private\CSV_MassUploadContractMacroTemplate-DEV CO.csv"
-	outfile = "C:\Users\jbajcar\AppData\Roaming\IBM\Client Access\Emulator\private\AS400-MSR\" & "AS400-MSR_" & datevalue & "_" & rnString & "_LOADREBATE" & ".txt" 'data dump file
+	filePath = "C:\Users\" & username & "\Documents\AS400 MACRO CSV\CSV_Process Contracts.csv"
+	outfile = "C:\Users\" & username & "\Documents\AS400 MACRO REPORTS\" & "AS400-MSR_" & datevalue & "_" & rnString & "_LOADREBATE" & ".txt" 'data dump file
 	'**************************
 	
 	'******Calculate file size in ROWS******
@@ -36,17 +37,16 @@ sub main()
 	Call FindFileSize(rows, objLine, strInfo, tempString) 'calls function to calculate number of rows in CSV file
 	ReDim dataArray(rows, columns) 'redefine array based on CSV file size
 	
-		'******Create data dump file*********
+		'******Create report file*********
 	Set objFSO = CreateObject("Scripting.FileSystemObject")
 	Set objFile = objFSO.CreateTextFile(outFile, True)
+
 	objFile.Write "******AS400 MACRO SCRIPT REPORT******" & vbCrlf
 	objFile.Write "Script: POD Upload" & vbCrlf
 	objFile.Write "User: CNOABAJCA" & vbCrlf
 	objFile.Write "Run Date: " & date & vbCrlf
-	objFile.Write autECLSession.autECLPS.GetText(03, 002, 26) & vbCrlf
-	objFile.Write autECLSession.autECLPS.GetText(04, 002, 27) & vbCrlf
 	objFile.Write "------------------------------------" & vbCrlf
-	objFile.Write "REBATE NUMBER,CONTRACT ID,CSV ITEM NUMBER,AS400 ITEM NUMBER,SYSTEM NOTES" & vbCrlf
+	objFile.Write "REBATE NUMBER,CONTRACT ID,CSV ITEM NUMBER,AS400 ITEM NUMBER,VENDOR ITEM INFORMATION,SYSTEM NOTES" & vbCrlf
 	
 	'******Load data in CSV file into array******
 	Call CreateFile(aFile, myFile, filePath, objLine) 'reloads in CSV files
