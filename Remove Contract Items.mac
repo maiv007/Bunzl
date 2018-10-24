@@ -5,9 +5,11 @@ DESCRIPTION=
 OPTION EXPLICIT
 autECLSession.SetConnectionByName(ThisSessionName)
 
-REM Author: Joey Bajcar
-REM Date Last Revised: July 10, 2017
+REM Author: Joseph Bajcar
+REM COPYRIGHT AUGUST 2018
+REM Date Last Revised: October 24, 2017
 REM This line calls the macro subroutine
+REM This is the property of Joseph Bajcar. Any unauthorized use will result in legal action.
 main
 
 sub main()
@@ -97,7 +99,10 @@ Function RunMacro(dataArray, rows, columns)
 		autECLSession.autECLOIA.WaitForInputReady
 		autECLSession.autECLPS.SendKeys "[enter]"
 		autECLSession.autECLPS.Wait 100
-		
+
+
+
+		REM This is to check if the vendor is valid and skips the line if not instead of stopping the macro
 		message = autECLSession.autECLPS.GetText(24, 002, 34)
 		if StrComp(message, "* Vendor/Customer Number Not Valid") = 0 then
 			autECLSession.autECLPS.SendKeys "[reset]"
@@ -113,7 +118,6 @@ Function RunMacro(dataArray, rows, columns)
 
 
 			autECLSession.autECLOIA.WaitForAppAvailable 
-			
 			autECLSession.autECLOIA.WaitForInputReady
 			autECLSession.autECLPS.SetCursorPos 01,069
 			autECLSession.autECLPS.Wait 10
