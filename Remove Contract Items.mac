@@ -14,7 +14,7 @@ main
 
 sub main()
 	'*******Variables*******
-	Dim aFile, myFile, filePath
+	Dim aFile, myFile, filePath,username
 	Dim vaMyArray, objLine, strInfo, x, y
 	Dim arraySize, rows, columns
 	Dim dataArray : dataArray = Array()
@@ -22,7 +22,8 @@ sub main()
 	Const ForReading = 1
 	'*******Declarations*******
 	columns = 11
-	filePath = "C:\Users\jbajcar\AppData\Roaming\IBM\Client Access\Emulator\private\CSV_MassUploadContractMacroTemplate-DEV SF.csv"
+	username = "jbajcar"
+	filePath = "C:\Users\" & username & "\Documents\AS400 MACRO CSV\CSV_Process Contracts.csv"
 	'**************************
 	
 	'******Calculate file size in ROWS******

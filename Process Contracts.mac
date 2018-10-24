@@ -29,7 +29,7 @@ sub main()
 	Call RndNumber(randomNumber, rnString)
 	datevalue = Day(date)&Month(date)&Year(date)
 	filePath = "C:\Users\" & username & "\Documents\AS400 MACRO CSV\CSV_Process Contracts.csv"
-	outfile = "C:\Users\" & username & "\Documents\AS400 MACRO REPORTS\" & "AS400-MSR_" & datevalue & "_" & rnString & "_LOADREBATE" & ".txt" 'data dump file
+	outfile = "C:\Users\" & username & "\Documents\AS400 MACRO REPORTS\" & "AS400-MSR_" & datevalue & "_" & rnString & "_LOADREBATE" & ".csv" 'data dump file
 	'**************************
 	
 	'******Calculate file size in ROWS******
@@ -109,6 +109,7 @@ End function
 
 Function RunMacro(dataArray, rows, columns, objFile)
 	Dim x, itemcheck, location, failCheck
+	Dim successfulItems, exceptionsItems
 	x=1
 	failCheck = 0
 	
@@ -807,7 +808,7 @@ Function GoToCompany(location, failCheck)
 	autECLSession.autECLPS.Wait 10	
 	autECLSession.autECLOIA.WaitForInputReady
 	autECLSession.autECLPS.SendKeys "[enter]"
-	autECLSession.autECLPS.Wait 50
+	autECLSession.autECLPS.Wait 100
 	
 	'====================
 	
