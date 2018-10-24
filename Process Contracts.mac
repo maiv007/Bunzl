@@ -27,7 +27,7 @@ sub main()
 	columns = 12
 	username = "jbajcar"
 	Call RndNumber(randomNumber, rnString)
-	datevalue = Day(date)&Month(date)&Year(date)
+	datevalue = Month(date)&Day(date)&Year(date)
 	filePath = "C:\Users\" & username & "\Documents\AS400 MACRO CSV\CSV_Process Contracts.csv"
 	outfile = "C:\Users\" & username & "\Documents\AS400 MACRO REPORTS\" & "AS400-MSR_" & datevalue & "_" & rnString & "_LOADREBATE" & ".csv" 'data dump file
 	'**************************
