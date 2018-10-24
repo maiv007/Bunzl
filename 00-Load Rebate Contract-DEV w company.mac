@@ -1,0 +1,947 @@
+[PCOMM SCRIPT HEADER]
+LANGUAGE=VBSCRIPT
+DESCRIPTION=
+[PCOMM SCRIPT SOURCE]
+OPTION EXPLICIT
+autECLSession.SetConnectionByName(ThisSessionName)
+
+REM Author: Joseph Bajcar
+REM COPYRIGHT AUGUST 2018
+REM Date Last Revised: August 27, 2017
+REM This line calls the macro subroutine
+REM This is the property of Joseph Bajcar. Any unauthorized use will result in legal action.
+main
+
+sub main()
+	'*******Variables*******
+	Dim aFile, myFile, filePath
+	Dim vaMyArray, objLine, strInfo, x, y
+	Dim arraySize, rows, columns
+	Dim dataArray : dataArray = Array()
+	Dim tempString
+	Const ForReading = 1
+	
+	Dim objFSO, outfile, objFile 'data dump file variables
+	Dim datevalue, randomNumber, rnString
+	'*******Declarations*******
+	columns = 12
+	Call RndNumber(randomNumber, rnString)
+	datevalue = Day(date)&Month(date)&Year(date)
+	filePath = "C:\Users\jbajcar\AppData\Roaming\IBM\Client Access\Emulator\private\CSV_MassUploadContractMacroTemplate-DEV CO.csv"
+	outfile = "C:\Users\jbajcar\AppData\Roaming\IBM\Client Access\Emulator\private\AS400-MSR\" & "AS400-MSR_" & datevalue & "_" & rnString & "_LOADREBATE" & ".txt" 'data dump file
+	'**************************
+	
+	'******Calculate file size in ROWS******
+	Call CreateFile(aFile, myFile, filePath, objLine) 'load in CSV file
+	Call FindFileSize(rows, objLine, strInfo, tempString) 'calls function to calculate number of rows in CSV file
+	ReDim dataArray(rows, columns) 'redefine array based on CSV file size
+	
+		'******Create data dump file*********
+	Set objFSO = CreateObject("Scripting.FileSystemObject")
+	Set objFile = objFSO.CreateTextFile(outFile, True)
+	objFile.Write "******AS400 MACRO SCRIPT REPORT******" & vbCrlf
+	objFile.Write "Script: POD Upload" & vbCrlf
+	objFile.Write "User: CNOABAJCA" & vbCrlf
+	objFile.Write "Run Date: " & date & vbCrlf
+	objFile.Write autECLSession.autECLPS.GetText(03, 002, 26) & vbCrlf
+	objFile.Write autECLSession.autECLPS.GetText(04, 002, 27) & vbCrlf
+	objFile.Write "------------------------------------" & vbCrlf
+	objFile.Write "REBATE NUMBER,CONTRACT ID,CSV ITEM NUMBER,AS400 ITEM NUMBER,SYSTEM NOTES" & vbCrlf
+	
+	'******Load data in CSV file into array******
+	Call CreateFile(aFile, myFile, filePath, objLine) 'reloads in CSV files
+	Call LoadData(objLine, dataArray, columns, strInfo, vaMyArray, rows) 'load data from CSV file into data array
+	
+	'******Run AS400 macro program******
+	Call RunMacro(dataArray, rows, columns, objFile)
+	
+	objFile.Write "------------------------------------" & vbCrlf
+	objFile.Write "END REPORT" & vbCrlf
+	objFile.Close
+	
+end sub
+
+Function RndNumber(randomNumber, rnString)
+	Dim nLow, nHigh,x
+	rnString = ""
+	For x = 1 to 6
+		nLow = 0
+		nHigh = 9
+		Randomize
+		randomNumber = Int((nHigh - nLow + 1)*Rnd + nLow)
+		rnString = rnString & randomNumber
+	Next
+End function
+
+Function CreateFile(aFile, myFile, filePath, objLine)
+	Set aFile = CreateObject("Scripting.FileSystemObject") 'create file object
+	Set myFile = aFile.GetFile(filePath) 'create file object with CSV file
+	Set objLine = myFile.OpenAsTextStream(1) 'create object to stream data from CSV file
+End function
+
+Function FindFileSize(rows, objLine, strInfo, tempString)
+	rows = 0
+	Do while objLine.AtEndOfStream <> true 'read file until null pointer, end of file/data
+		strInfo = objLine.ReadLine
+		tempString = Split(strInfo,",")
+		if StrComp(tempString(1), " ") = -1 then 'checks to see if the cell is blank and stops ReadIn stream
+			Exit do
+		end if
+		rows = rows + 1
+	Loop
+	rows = rows - 1
+End function
+
+Function LoadData(objLine, dataArray, columns, strInfo, vaMyArray, rows)
+	Dim x,y
+	x = 0
+	Do while objLine.AtEndOfStream <> true 'read file until null pointer, end of file/data
+		strInfo =   objLine.ReadLine
+		vaMyArray = Split(strInfo, ",")
+		For y = 0 to columns-1
+			dataArray(x, y) = Replace(vaMyArray(y)," ", "") 'REMOVE ANY BLANKS
+		Next
+		if x >= rows then exit do
+		x = x + 1
+	Loop
+	
+End function
+
+Function RunMacro(dataArray, rows, columns, objFile)
+	Dim x, itemcheck, location, failCheck
+	x=1
+	failCheck = 0
+	
+	Do while x <= rows
+		
+		location = dataArray(x,11)
+		if location <> Empty then
+			if StrComp(autECLSession.autECLPS.GetText(01, 026, 29), "Cost & Sell Price Maintenance") = 0 then
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[pf3]"
+				autECLSession.autECLPS.Wait 10
+				Call GoToCompany(location, failCheck)
+				if failCheck = 1 then
+					Call MacroFailed
+					objFile.Write "Macro failed..."
+					Exit function
+				else
+					objFile.Write "Location: " & dataArray(x,11) & vbCrlf
+				end if
+			else
+				Call GoToCompany(location, failCheck)
+				if failCheck = 1 then
+					Call MacroFailed
+					objFile.Write "Macro failed..."
+					Exit function
+				else
+					objFile.Write "Location: " & dataArray(x,11) & vbCrlf
+				end if
+			end if
+		end if	
+	
+		itemcheck = ""
+		autECLSession.autECLOIA.WaitForAppAvailable 
+	
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SetCursorPos 14,026
+		autECLSession.autECLPS.Wait 10
+
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys dataArray(x,0) 'enter rebate#
+		autECLSession.autECLPS.Wait 10
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[field+]"
+		autECLSession.autECLPS.Wait 10
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[enter]"
+		autECLSession.autECLPS.Wait 10
+		
+		autECLSession.autECLOIA.WaitForAppAvailable 
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys dataArray(x,1) 'enter item#
+		autECLSession.autECLPS.Wait 10
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[enter]"
+		autECLSession.autECLPS.Wait 10
+		
+		autECLSession.autECLOIA.WaitForAppAvailable 
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SetCursorPos 01,069
+		autECLSession.autECLPS.Wait 10
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys dataArray(x,1) 'enter item#
+		autECLSession.autECLPS.Wait 10
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[enter]"
+		autECLSession.autECLPS.Wait 100
+		
+		'THIS DEALS WITH PENDING PODS
+		if StrComp(dataArray(x,10), "y") = 0 Or StrComp(dataArray(x,10), "Y") = 0 then
+			itemcheck = autECLSession.autECLPS.GetText(07, 008, 9)
+			If InStr(itemcheck, " ") > 0 then
+				itemcheck = autECLSession.autECLPS.GetText(07, 008, 8)
+			end if
+			
+			if StrComp(itemcheck, dataArray(x,1)) = 0 then
+				REM replace current PENDING POD that exists
+				if StrComp(autECLSession.autECLPS.GetText(07, 080, 1), "P") = 0 then
+					autECLSession.autECLOIA.WaitForInputReady 
+					autECLSession.autECLPS.SetCursorPos 07,002
+					autECLSession.autECLPS.Wait 10
+					autECLSession.autECLOIA.WaitForInputReady 
+					autECLSession.autECLPS.SendKeys "d"
+					autECLSession.autECLPS.Wait 25
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys "[enter]"
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys "[pf1]"
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForAppAvailable 
+					
+					autECLSession.autECLOIA.WaitForInputReady 
+					autECLSession.autECLPS.SetCursorPos 07,008
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys dataArray(x,1) 'enter item#
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys "[tab]"
+					autECLSession.autECLPS.Wait 10
+					
+					if dataArray(x,2) = Empty then
+						autECLSession.autECLOIA.WaitForInputReady 
+						autECLSession.autECLPS.SendKeys "[tab]" 'skip D field
+						autECLSession.autECLPS.Wait 10
+					else
+						autECLSession.autECLOIA.WaitForInputReady 
+						autECLSession.autECLPS.SendKeys dataArray(x,2) 'enter D field
+						autECLSession.autECLPS.Wait 10
+					end if
+					
+					autECLSession.autECLOIA.WaitForInputReady 
+					autECLSession.autECLPS.SendKeys dataArray(x,3) 'enter field 1 
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys dataArray(x,4) 'enter field 2 
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys dataArray(x,5) 'enter value/percent 
+					autECLSession.autECLPS.Wait 10
+					
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys "[tab]"
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys dataArray(x,6) 'enter eff date
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys "[tab]"
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys dataArray(x,7) 'enter exp date
+					autECLSession.autECLPS.Wait 10
+					
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys "[tab]"
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys dataArray(x,8) 'enter vendor number
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady 
+					autECLSession.autECLPS.SetCursorPos 07,080
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys "p" 'enter pending
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys dataArray(x,9) 'enter contract ID
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys "[enter]"
+					autECLSession.autECLPS.Wait 10
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					objFile.Write dataArray(x,0) & "," & dataArray(x,9) & "," & dataArray(x,1) & "," & autECLSession.autECLPS.GetText(07, 008, 9) & "," & autECLSession.autECLPS.GetText(07, 021, 15) & ","  & autECLSession.autECLPS.GetText(24, 001, 75) & vbCrlf
+					autECLSession.autECLPS.Wait 50
+					
+					
+					autECLSession.autECLOIA.WaitForInputReady
+					autECLSession.autECLPS.SendKeys "[pf12]"
+					autECLSession.autECLPS.Wait 10
+					
+				else
+					REM scenario: Updating an current Pending 
+					itemcheck = autECLSession.autECLPS.GetText(09, 008, 9)
+					If InStr(itemcheck, " ") > 0 then
+						itemcheck = autECLSession.autECLPS.GetText(09, 008, 8)
+					end if
+					if StrComp(itemcheck, dataArray(x,1)) = 0 then
+						REM add override current Pending POD
+						if StrComp(autECLSession.autECLPS.GetText(09, 080, 1), "P") = 0 then
+							autECLSession.autECLOIA.WaitForInputReady 
+							autECLSession.autECLPS.SetCursorPos 09,002
+							autECLSession.autECLPS.Wait 10
+							autECLSession.autECLOIA.WaitForInputReady 
+							autECLSession.autECLPS.SendKeys "d"
+							autECLSession.autECLPS.Wait 25
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys "[enter]"
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys "[pf1]"
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForAppAvailable 
+							
+							autECLSession.autECLOIA.WaitForInputReady 
+							autECLSession.autECLPS.SetCursorPos 07,008
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys dataArray(x,1) 'enter item#
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys "[tab]"
+							autECLSession.autECLPS.Wait 10
+							
+							if dataArray(x,2) = Empty then
+								autECLSession.autECLOIA.WaitForInputReady 
+								autECLSession.autECLPS.SendKeys "[tab]" 'skip D field
+								autECLSession.autECLPS.Wait 10
+							else
+								autECLSession.autECLOIA.WaitForInputReady 
+								autECLSession.autECLPS.SendKeys dataArray(x,2) 'enter D field
+								autECLSession.autECLPS.Wait 10
+							end if
+							
+							autECLSession.autECLOIA.WaitForInputReady 
+							autECLSession.autECLPS.SendKeys dataArray(x,3) 'enter field 1 
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys dataArray(x,4) 'enter field 2 
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys dataArray(x,5) 'enter value/percent 
+							autECLSession.autECLPS.Wait 10
+							
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys "[tab]"
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys dataArray(x,6) 'enter eff date
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys "[tab]"
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys dataArray(x,7) 'enter exp date
+							autECLSession.autECLPS.Wait 10
+							
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys "[tab]"
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys dataArray(x,8) 'enter vendor number
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady 
+							autECLSession.autECLPS.SetCursorPos 07,080
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys "p" 'enter pending
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys dataArray(x,9) 'enter contract ID
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys "[enter]"
+							autECLSession.autECLPS.Wait 10
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							objFile.Write dataArray(x,0) & "," & dataArray(x,9) & "," & dataArray(x,1) & "," & autECLSession.autECLPS.GetText(07, 008, 9) & "," & autECLSession.autECLPS.GetText(07, 021, 15) & ","  & autECLSession.autECLPS.GetText(24, 001, 75) & vbCrlf
+							autECLSession.autECLPS.Wait 50
+							
+							autECLSession.autECLOIA.WaitForInputReady
+							autECLSession.autECLPS.SendKeys "[pf12]"
+							autECLSession.autECLPS.Wait 10
+							
+						end if
+					else
+						REM add pending POD if current active POD exists and no pending exists
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys "[pf1]"
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForAppAvailable 
+						
+						autECLSession.autECLOIA.WaitForInputReady 
+						autECLSession.autECLPS.SetCursorPos 07,008
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys dataArray(x,1) 'enter item#
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys "[tab]"
+						autECLSession.autECLPS.Wait 10
+						
+						if dataArray(x,2) = Empty then
+							autECLSession.autECLOIA.WaitForInputReady 
+							autECLSession.autECLPS.SendKeys "[tab]" 'skip D field
+							autECLSession.autECLPS.Wait 10
+						else
+							autECLSession.autECLOIA.WaitForInputReady 
+							autECLSession.autECLPS.SendKeys dataArray(x,2) 'enter D field
+							autECLSession.autECLPS.Wait 10
+						end if
+						
+						autECLSession.autECLOIA.WaitForInputReady 
+						autECLSession.autECLPS.SendKeys dataArray(x,3) 'enter field 1 
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys dataArray(x,4) 'enter field 2 
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys dataArray(x,5) 'enter value/percent 
+						autECLSession.autECLPS.Wait 10
+						
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys "[tab]"
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys dataArray(x,6) 'enter eff date
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys "[tab]"
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys dataArray(x,7) 'enter exp date
+						autECLSession.autECLPS.Wait 10
+						
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys "[tab]"
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys dataArray(x,8) 'enter vendor number
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady 
+						autECLSession.autECLPS.SetCursorPos 07,080
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys "p" 'enter pending
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys dataArray(x,9) 'enter contract ID
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys "[enter]"
+						autECLSession.autECLPS.Wait 10
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						objFile.Write dataArray(x,0) & "," & dataArray(x,9) & "," & dataArray(x,1) & "," & autECLSession.autECLPS.GetText(07, 008, 9) & "," & autECLSession.autECLPS.GetText(07, 021, 15) & ","  & autECLSession.autECLPS.GetText(24, 001, 75) & vbCrlf
+						autECLSession.autECLPS.Wait 50
+						
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys "[pf12]"
+						autECLSession.autECLPS.Wait 10
+					end if
+				end if
+			else
+			REM add PENDING POD if no current active exists and no pending exists
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[pf1]"
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForAppAvailable 
+				
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SetCursorPos 07,008
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,1) 'enter item#
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[tab]"
+				autECLSession.autECLPS.Wait 10
+				
+				if dataArray(x,2) = Empty then
+					autECLSession.autECLOIA.WaitForInputReady 
+					autECLSession.autECLPS.SendKeys "[tab]" 'skip D field
+					autECLSession.autECLPS.Wait 10
+				else
+					autECLSession.autECLOIA.WaitForInputReady 
+					autECLSession.autECLPS.SendKeys dataArray(x,2) 'enter D field
+					autECLSession.autECLPS.Wait 10
+				end if
+				
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SendKeys dataArray(x,3) 'enter field 1 
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,4) 'enter field 2 
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,5) 'enter value/percent 
+				autECLSession.autECLPS.Wait 10
+				
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[tab]"
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,6) 'enter eff date
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[tab]"
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,7) 'enter exp date
+				autECLSession.autECLPS.Wait 10
+				
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[tab]"
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,8) 'enter vendor number
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SetCursorPos 07,080
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "p" 'enter pending
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,9) 'enter contract ID
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[enter]"
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				objFile.Write dataArray(x,0) & "," & dataArray(x,9) & "," & dataArray(x,1) & "," & autECLSession.autECLPS.GetText(07, 008, 9) & "," & autECLSession.autECLPS.GetText(07, 021, 15) & ","  & autECLSession.autECLPS.GetText(24, 001, 75) & vbCrlf
+				autECLSession.autECLPS.Wait 50
+			
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[pf12]"
+				autECLSession.autECLPS.Wait 10
+			
+			end if
+		
+		
+		
+		else
+		'---------NONE PENDINGS--------------
+			itemcheck = autECLSession.autECLPS.GetText(07, 008, 9)
+			If InStr(itemcheck, " ") > 0 then
+				itemcheck = autECLSession.autECLPS.GetText(07, 008, 8)
+			end if
+		
+			if StrComp(itemcheck, dataArray(x,1)) = 0 then
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SetCursorPos 07,039
+				autECLSession.autECLPS.Wait 10
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SendKeys "[eraseeof]"
+				autECLSession.autECLPS.Wait 25
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,3) 'enter field 1
+				autECLSession.autECLPS.Wait 10
+			
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SetCursorPos 07,041
+				autECLSession.autECLPS.Wait 10
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SendKeys "[eraseeof]"
+				autECLSession.autECLPS.Wait 25
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,4) 'enter field 2
+				autECLSession.autECLPS.Wait 10
+			
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SetCursorPos 07,043
+				autECLSession.autECLPS.Wait 10
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SendKeys "[eraseeof]"
+				autECLSession.autECLPS.Wait 25
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,5) 'enter value/percent 
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SetCursorPos 07,055
+				autECLSession.autECLPS.Wait 10
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SendKeys "[eraseeof]"
+				autECLSession.autECLPS.Wait 25
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,6) 'enter eff date
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SetCursorPos 07,064
+				autECLSession.autECLPS.Wait 10
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SendKeys "[eraseeof]"
+				autECLSession.autECLPS.Wait 25
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,7) 'enter exp date
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SetCursorPos 07,073
+				autECLSession.autECLPS.Wait 10
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SendKeys "[eraseeof]"
+				autECLSession.autECLPS.Wait 25
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,8) 'enter vender #
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SetCursorPos 08,021
+				autECLSession.autECLPS.Wait 10
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SendKeys "[eraseeof]"
+				autECLSession.autECLPS.Wait 25
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,9) 'enter contract ID
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[enter]"
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				objFile.Write dataArray(x,0) & "," & dataArray(x,9) & "," & dataArray(x,1) & "," & autECLSession.autECLPS.GetText(07, 008, 9) & "," & autECLSession.autECLPS.GetText(07, 021, 15) & ","  & autECLSession.autECLPS.GetText(24, 001, 75) & vbCrlf
+				autECLSession.autECLPS.Wait 50
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[pf12]"
+				autECLSession.autECLPS.Wait 10
+				
+			else
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[pf1]"
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForAppAvailable 
+				
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SetCursorPos 07,008
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,1) 'enter item#
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[tab]"
+				autECLSession.autECLPS.Wait 10
+				
+				if dataArray(x,2) = Empty then
+					autECLSession.autECLOIA.WaitForInputReady 
+					autECLSession.autECLPS.SendKeys "[tab]" 'skip D field
+					autECLSession.autECLPS.Wait 10
+				else
+					autECLSession.autECLOIA.WaitForInputReady 
+					autECLSession.autECLPS.SendKeys dataArray(x,2) 'enter D field
+					autECLSession.autECLPS.Wait 10
+				end if
+				
+				autECLSession.autECLOIA.WaitForInputReady 
+				autECLSession.autECLPS.SendKeys dataArray(x,3) 'enter field 1 
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,4) 'enter field 2 
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,5) 'enter value/percent 
+				autECLSession.autECLPS.Wait 10
+				
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[tab]"
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,6) 'enter eff date
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[tab]"
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,7) 'enter exp date
+				autECLSession.autECLPS.Wait 10
+				
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[tab]"
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,8) 'enter vendor number
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[tab]"
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys dataArray(x,9) 'enter contract ID
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[enter]"
+				autECLSession.autECLPS.Wait 10
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				objFile.Write dataArray(x,0) & "," & dataArray(x,9) & "," & dataArray(x,1) & "," & autECLSession.autECLPS.GetText(07, 008, 9) & "," & autECLSession.autECLPS.GetText(07, 021, 15) & ","  & autECLSession.autECLPS.GetText(24, 001, 75) & vbCrlf
+				autECLSession.autECLPS.Wait 50
+				
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[pf12]"
+				autECLSession.autECLPS.Wait 10
+				
+			end if
+		'---------
+		end if
+		
+		x=x+1
+		
+	Loop
+	
+	Call MacroComplete()
+End function
+
+
+Function GoToCompany(location, failCheck)
+	Dim Found, row, column,maxRows, count
+
+	REM Script to get to MASTERMENU
+	autECLSession.autECLOIA.WaitForAppAvailable
+	autECLSession.autECLOIA.WaitForInputReady
+	autECLSession.autECLPS.SendKeys "[pf4]"
+	autECLSession.autECLPS.Wait 10
+	autECLSession.autECLOIA.WaitForInputReady
+	autECLSession.autECLPS.SetCursorPos 05,016
+	autECLSession.autECLPS.Wait 10
+	autECLSession.autECLOIA.WaitForInputReady
+	autECLSession.autECLPS.SendKeys "mastermenu"
+	autECLSession.autECLPS.Wait 10
+	autECLSession.autECLOIA.WaitForInputReady
+	autECLSession.autECLPS.SendKeys "[enter]"
+	autECLSession.autECLPS.Wait 10
+	autECLSession.autECLOIA.WaitForInputReady
+	autECLSession.autECLPS.SetCursorPos 06,002
+	autECLSession.autECLPS.Wait 10	
+	autECLSession.autECLOIA.WaitForInputReady
+	autECLSession.autECLPS.SendKeys "1"
+	autECLSession.autECLPS.Wait 10	
+	autECLSession.autECLOIA.WaitForInputReady
+	autECLSession.autECLPS.SendKeys "[enter]"
+	autECLSession.autECLPS.Wait 50
+	
+	'====================
+	
+	Found = 0
+	row = 9 'starting row
+	column = 22 'starting column
+	maxRows = 9
+	count = 0
+
+	if StrComp(autECLSession.autECLPS.GetText(001, 009, 3), location) = 0 then
+		'already in requested location
+		REM Script to get to MASTERMENU
+		autECLSession.autECLOIA.WaitForAppAvailable
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[pf4]"
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SetCursorPos 05,016
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "DSJOBM065"
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[enter]"
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SetCursorPos 06,002
+		autECLSession.autECLPS.Wait 10	
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "1"
+		autECLSession.autECLPS.Wait 10	
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[enter]"
+		autECLSession.autECLPS.Wait 10
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SetCursorPos 21,010
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "4"
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[enter]"
+		autECLSession.autECLPS.Wait 10
+		
+	else
+		autECLSession.autECLOIA.WaitForAppAvailable
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[pf11]"
+		autECLSession.autECLPS.Wait 50
+
+		Do while Found = 0
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.Wait 10
+			if StrComp(autECLSession.autECLPS.GetText(row, column, 3), location) = 0 And StrComp(autECLSession.autECLPS.GetText(row, 19, 2), " 1") <> 0  then 'if location equals AS400 and not company 1
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SetCursorPos row, 016
+				autECLSession.autECLPS.Wait 10
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "x"
+				autECLSession.autECLPS.Wait 10
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[enter]"
+				autECLSession.autECLPS.Wait 10
+				Found = 1
+				Exit do
+			else
+				if count >= maxRows then
+					autECLSession.autECLOIA.WaitForInputReady
+					if StrComp(autECLSession.autECLPS.GetText(18, 061, 6), "Bottom") = 0 then
+						MsgBox("Location not found.")
+						failCheck = 1
+						Exit do
+					else
+						autECLSession.autECLOIA.WaitForInputReady
+						autECLSession.autECLPS.SendKeys "[roll up]"
+						autECLSession.autECLPS.Wait 10
+						row = 9
+						count = 0
+					end if
+				else 
+					row = row + 1
+					count = count + 1
+				end if
+			end if
+		Loop
+			
+			
+		if failCheck = 1 then
+			Exit Function
+		else
+			REM Script to get to COST & SELL PRICE MAINTENANCE SCREEN
+			autECLSession.autECLOIA.WaitForAppAvailable
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys "[pf4]"
+			autECLSession.autECLPS.Wait 10
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 05,016
+			autECLSession.autECLPS.Wait 10
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys "DSJOBM065"
+			autECLSession.autECLPS.Wait 10
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys "[enter]"
+			autECLSession.autECLPS.Wait 10
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 06,002
+			autECLSession.autECLPS.Wait 10	
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys "1"
+			autECLSession.autECLPS.Wait 10	
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys "[enter]"
+			autECLSession.autECLPS.Wait 10
+			
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 21,010
+			autECLSession.autECLPS.Wait 10
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys "4"
+			autECLSession.autECLPS.Wait 10
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys "[enter]"
+			autECLSession.autECLPS.Wait 10
+		end if
+	end if	
+End function
+
+
+Function MacroComplete()
+	MsgBox("Update Complete.")
+End function
+
+Function MacroFailed()
+	MsgBox("Update Not Complete.")
+End function
+
