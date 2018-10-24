@@ -7,7 +7,7 @@ autECLSession.SetConnectionByName(ThisSessionName)
 
 REM Author: Joseph Bajcar
 REM COPYRIGHT AUGUST 2018
-REM Date Last Revised: August 27, 2017
+REM Date Last Revised: October 24, 2017
 REM This line calls the macro subroutine
 REM This is the property of Joseph Bajcar. Any unauthorized use will result in legal action.
 main
