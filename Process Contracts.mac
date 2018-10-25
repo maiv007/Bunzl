@@ -20,7 +20,7 @@ sub main()
 	Dim tempString
 	Const ForReading = 1
 	
-	Dim objFSO, outfile, objFile 'data dump file variables
+	Dim objFSO, outfile, objFile 'MSR AS400 script report file variables
 	Dim datevalue, randomNumber, rnString
 	'*******Declarations*******
 	columns = 15
@@ -37,11 +37,9 @@ sub main()
 	Call FindFileSize(rows, objLine, strInfo, tempString) 'calls function to calculate number of rows in CSV file
 	ReDim dataArray(rows, columns) 'redefine array based on CSV file size
 	
-	'******Create report file*********
-	Set objFSO = CreateObject("Scripting.FileSystemObject")
-	Set objFile = objFSO.CreateTextFile(outFile, True)
 
-	Call initializeReport(objFile)
+
+	Call initializeReport(objFSO, objFile, outfile)
 	
 	'******Load data in CSV file into array******
 	Call CreateFile(aFile, myFile, filePath, objLine) 'reloads in CSV files
@@ -97,7 +95,10 @@ Function LoadData(objLine, dataArray, columns, strInfo, vaMyArray, rows)
 	
 End function
 
-Function initializeReport(objFile)
+Function initializeReport(objFSO, objFile, outfile)
+	'******Create report file*********
+	Set objFSO = CreateObject("Scripting.FileSystemObject")
+	Set objFile = objFSO.CreateTextFile(outFile, True)
 	objFile.Write "******AS400 MACRO SCRIPT REPORT******" & vbCrlf
 	objFile.Write "Script: POD Upload" & vbCrlf
 	objFile.Write "User: CNOABAJCA" & vbCrlf
