@@ -302,9 +302,6 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 			end if
 		end if
 		
-		
-
-
 		x=x+1 'increment loop to next line
 		
 	Loop
