@@ -9,6 +9,7 @@ REM Author: Joseph Bajcar
 REM COPYRIGHT AUGUST 2018
 REM This line calls the macro subroutine
 REM This is the property of Joseph Bajcar. Any unauthorized use will result in legal action.
+
 main
 
 sub main()
@@ -37,6 +38,7 @@ sub main()
 	Call FindFileSize(rows, objLine, strInfo, tempString) 'calls function to calculate number of rows in CSV file
 	ReDim dataArray(rows, columns) 'redefine array based on CSV file size
 	
+	'******Create and initalize MSR Report csv file******
 	Call initializeReport(objFSO, objFile, outfile)
 	
 	'******Load data in CSV file into array******
@@ -98,32 +100,34 @@ Function initializeReport(objFSO, objFile, outfile)
 	Set objFSO = CreateObject("Scripting.FileSystemObject")
 	Set objFile = objFSO.CreateTextFile(outFile, True)
 	objFile.Write "******AS400 MACRO SCRIPT REPORT******" & vbCrlf
-	objFile.Write "Script: POD Upload" & vbCrlf
-	objFile.Write "User: CNOABAJCA" & vbCrlf
-	objFile.Write "Run Date: " & date & vbCrlf
+	objFile.Write "Script:," & "POD Upload" & vbCrlf
+	objFile.Write "User:," & "CNOABAJCA" & vbCrlf
+	objFile.Write "Run Date:," & Month(date) & "/" & Day(date) & "/" & Year(date) & vbCrlf
 	objFile.Write "------------------------------------" & vbCrlf
-	objFile.Write "LOCATION,REBATE NUMBER,CONTRACT NUMBER,AS400 BUNZL NUMBER,AS400 COST,AS400 VENDOR PART,VENDOR NUMBER,CSV BUNZL NUMBER,CSV COST ENTERED,CSV VENDOR PART,CSV VENDOR INFO,PENDING,SYSTEM NOTES" & vbCrlf
+	objFile.Write "LOCATION,REBATE NUMBER,REBATE NAME,CONTRACT NUMBER,AS400 BUNZL NUMBER,AS400 COST,AS400 VENDOR PART,VENDOR NUMBER,CSV BUNZL NUMBER,CSV COST ENTERED,CSV VENDOR PART,CSV VENDOR INFO,PENDING,SYSTEM NOTES" & vbCrlf
 End function
 
 Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 	Dim x, itemcheck, failCheck
 	Dim successfulItems, exceptionsItems
 	Dim location, rebatenumber, bunzlnumber, vendorpart, vendordesc, optionD, option1, option2
-	Dim price, effdate, expdate, vendornumber, contractnumber, optPending, optRemove
+	Dim price, effdate, expdate, vendornumber, contractnumber, optPending, optRemove, rebatename
 
-	x=1
+	x=1 'start at row 2 (0 counts as the first row) of the csv file. Row 1 contains the template headers
 	failCheck = 0
-	successfulItems = 0
-	exceptionsItems = 0
+	successfulItems = 0 'counts the number of items that are successfully added to the rebate file. No system messages
+	exceptionsItems = 0 ' counts the number of items of exceptions. This means items that have a system message when commited in the AS400
 	
+	REM Loop until end of CSV file total rows
 	Do while x <= rows
 		
 		REM contract value assignments
 		location = Replace(dataArray(x,0), " ", "")
 		rebatenumber = Replace(dataArray(x,1), " ", "")
+		rebatename = ""
 		bunzlnumber = Replace(dataArray(x,2), " ", "")
 		vendorpart = Replace(dataArray(x,3), " ", "")
-		vendordesc = dataArray(x,4)
+		vendordesc = dataArray(x,4) 'do not remove spaces here
 		optionD = Replace(dataArray(x,5), " ", "")
 		option1 = Replace(dataArray(x,6), " ", "")
 		option2 = Replace(dataArray(x,7), " ", "")
@@ -180,7 +184,9 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 		autECLSession.autECLPS.Wait 10
 		autECLSession.autECLOIA.WaitForInputReady
 		autECLSession.autECLPS.SendKeys "[enter]"
-		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLPS.Wait 100
+
+		
 		
 		REM SCRIPT: search current item number from CSV data array
 		autECLSession.autECLOIA.WaitForAppAvailable 
@@ -197,17 +203,18 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 		autECLSession.autECLPS.SendKeys "[enter]"
 		autECLSession.autECLPS.Wait 100
 		autECLSession.autECLOIA.WaitForAppAvailable
+		rebatename = autECLSession.autECLPS.GetText(05, 015, 40)
 
 		if StrComp(optRemove, "y") = 0 Or StrComp(optRemove, "Y") = 0 then
 			if StrComp(Replace(autECLSession.autECLPS.GetText(07, 008, 9), " ", ""), bunzlnumber) = 0 then		
-				Call removeRebateLine(location, rebatenumber, vendorpart, vendordesc, bunzlnumber, objFile)
+				Call removeRebateLine(location, rebatenumber, rebatename ,vendorpart, vendordesc, bunzlnumber, objFile)
 				successfulItems = successfulItems + 1
 				autECLSession.autECLPS.Wait 10
 				autECLSession.autECLOIA.WaitForInputReady
 				autECLSession.autECLPS.SendKeys "[pf12]"
 				autECLSession.autECLPS.Wait 50
 			else
-				objFile.Write location & "," & rebatenumber & "," & " " & "," & " " & "," & " " & "," & " " & "," & " " & "," & bunzlnumber & "," & " " & "," & vendorpart & "," & vendordesc & "," & "," & "Removal attempted. Item not found" & vbCrlf
+				objFile.Write location & "," & rebatenumber & "," & rebatename & "," & " " & "," & " " & "," & " " & "," & " " & "," & " " & "," & bunzlnumber & "," & " " & "," & vendorpart & "," & vendordesc & "," & "," & "Removal attempted. Item not found" & vbCrlf
 				exceptionsItems = exceptionsItems + 1
 				autECLSession.autECLPS.Wait 10
 				autECLSession.autECLOIA.WaitForInputReady
@@ -274,7 +281,7 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 				autECLSession.autECLPS.Wait 10
 				Call removeRebateLine_Simple()
 				autECLSession.autECLPS.Wait 50
-				Call addRebateLine(location, rebatenumber, bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
+				Call addRebateLine(location, rebatenumber, rebatename, bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
 				'if item comes back with a system message then item failed to add
 				if failCheck = 1 then
 					exceptionsItems = exceptionsItems + 1
@@ -284,7 +291,7 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 				failCheck = 0
 			else
 				autECLSession.autECLPS.Wait 50
-				Call addRebateLine(location, rebatenumber, bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
+				Call addRebateLine(location, rebatenumber, rebatename, bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
 				'if item comes back with a system message then item failed to add
 				if failCheck = 1 then
 					exceptionsItems = exceptionsItems + 1
@@ -315,28 +322,59 @@ Function GoToCompany(location, failCheck)
 	Dim Found, row, column,maxRows, count
 
 	REM Script to get to MASTERMENU
-	autECLSession.autECLOIA.WaitForAppAvailable
-	autECLSession.autECLOIA.WaitForInputReady
-	autECLSession.autECLPS.SendKeys "[pf4]"
-	autECLSession.autECLPS.Wait 10
-	autECLSession.autECLOIA.WaitForInputReady
-	autECLSession.autECLPS.SetCursorPos 05,016
-	autECLSession.autECLPS.Wait 10
-	autECLSession.autECLOIA.WaitForInputReady
-	autECLSession.autECLPS.SendKeys "mastermenu"
-	autECLSession.autECLPS.Wait 10
-	autECLSession.autECLOIA.WaitForInputReady
-	autECLSession.autECLPS.SendKeys "[enter]"
-	autECLSession.autECLPS.Wait 10
-	autECLSession.autECLOIA.WaitForInputReady
-	autECLSession.autECLPS.SetCursorPos 06,002
-	autECLSession.autECLPS.Wait 10	
-	autECLSession.autECLOIA.WaitForInputReady
-	autECLSession.autECLPS.SendKeys "1"
-	autECLSession.autECLPS.Wait 10	
-	autECLSession.autECLOIA.WaitForInputReady
-	autECLSession.autECLPS.SendKeys "[enter]"
-	autECLSession.autECLPS.Wait 100
+	If StrComp(autECLSession.autECLPS.GetText(01, 072, 8), "MNU003C1") = 1 then
+		Do while StrComp(autECLSession.autECLPS.GetText(01, 072, 8), "MNU003C1") = 1
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys "[pf3]"
+			autECLSession.autECLPS.Wait 25	
+		loop
+		autECLSession.autECLOIA.WaitForAppAvailable
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[pf4]"
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SetCursorPos 05,016
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "mastermenu"
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[enter]"
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SetCursorPos 06,002
+		autECLSession.autECLPS.Wait 10	
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "1"
+		autECLSession.autECLPS.Wait 10	
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[enter]"
+		autECLSession.autECLPS.Wait 100
+	else
+		autECLSession.autECLOIA.WaitForAppAvailable
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[pf4]"
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SetCursorPos 05,016
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "mastermenu"
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[enter]"
+		autECLSession.autECLPS.Wait 10
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SetCursorPos 06,002
+		autECLSession.autECLPS.Wait 10	
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "1"
+		autECLSession.autECLPS.Wait 10	
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[enter]"
+		autECLSession.autECLPS.Wait 100
+	end if
+
 	
 	'====================
 	
@@ -465,7 +503,7 @@ Function GoToCompany(location, failCheck)
 	end if	
 End function
 
-Function addRebateLine(location, rebatenumber, bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
+Function addRebateLine(location, rebatenumber, rebatename, bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
 	Dim pending
 	REM SCRIPT: Add POD line to current rebate file
 	autECLSession.autECLOIA.WaitForAppAvailable 
@@ -539,8 +577,9 @@ Function addRebateLine(location, rebatenumber, bunzlnumber, optionD, option1, op
 		failCheck = 1
 	end if
 
+	autECLSession.autECLPS.Wait 50
 	autECLSession.autECLOIA.WaitForInputReady
-	objFile.Write location & "," & rebatenumber & "," & autECLSession.autECLPS.GetText(08, 021, 15) & "," & autECLSession.autECLPS.GetText(07, 008, 9) & "," & autECLSession.autECLPS.GetText(07, 043, 11) & "," & autECLSession.autECLPS.GetText(07, 021, 15) & "," & autECLSession.autECLPS.GetText(07, 073, 6) & "," & bunzlnumber & "," & price & "," & vendorpart & "," & vendordesc & "," & pending & "," & autECLSession.autECLPS.GetText(24, 001, 75) & vbCrlf
+	objFile.Write location & "," & rebatenumber & "," & rebatename & "," & autECLSession.autECLPS.GetText(08, 021, 15) & "," & autECLSession.autECLPS.GetText(07, 008, 9) & "," & autECLSession.autECLPS.GetText(07, 043, 11) & "," & autECLSession.autECLPS.GetText(07, 021, 15) & "," & autECLSession.autECLPS.GetText(07, 073, 6) & "," & bunzlnumber & "," & price & "," & vendorpart & "," & vendordesc & "," & pending & "," & autECLSession.autECLPS.GetText(24, 001, 75) & vbCrlf
 	autECLSession.autECLPS.Wait 50
 
 	autECLSession.autECLOIA.WaitForInputReady
@@ -563,7 +602,8 @@ End function
 
 
 Function removeRebateLine(location, rebatenumber, vendorpart, vendordesc, bunzlnumber, objFile)
-	objFile.Write location & "," & rebatenumber & "," & autECLSession.autECLPS.GetText(08, 021, 15) & "," & autECLSession.autECLPS.GetText(07, 008, 9) & "," & autECLSession.autECLPS.GetText(07, 043, 11) & "," & autECLSession.autECLPS.GetText(07, 021, 15) & "," & autECLSession.autECLPS.GetText(07, 073, 6) & "," & bunzlnumber & "," & " " & "," & vendorpart & "," & vendordesc & "," & "," & "item removed" & vbCrlf
+	autECLSession.autECLPS.Wait 50
+	objFile.Write location & "," & rebatenumber & "," & rebatename & "," & autECLSession.autECLPS.GetText(08, 021, 15) & "," & autECLSession.autECLPS.GetText(07, 008, 9) & "," & autECLSession.autECLPS.GetText(07, 043, 11) & "," & autECLSession.autECLPS.GetText(07, 021, 15) & "," & autECLSession.autECLPS.GetText(07, 073, 6) & "," & bunzlnumber & "," & " " & "," & vendorpart & "," & vendordesc & "," & "," & "item removed" & vbCrlf
 
 	REM SCRIPT: Remove item line
 	autECLSession.autECLOIA.WaitForInputReady 
