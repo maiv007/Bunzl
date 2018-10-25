@@ -37,8 +37,6 @@ sub main()
 	Call FindFileSize(rows, objLine, strInfo, tempString) 'calls function to calculate number of rows in CSV file
 	ReDim dataArray(rows, columns) 'redefine array based on CSV file size
 	
-
-
 	Call initializeReport(objFSO, objFile, outfile)
 	
 	'******Load data in CSV file into array******
