@@ -1,0 +1,302 @@
+[PCOMM SCRIPT HEADER]
+LANGUAGE=VBSCRIPT
+DESCRIPTION=
+[PCOMM SCRIPT SOURCE]
+OPTION EXPLICIT
+autECLSession.SetConnectionByName(ThisSessionName)
+
+REM This line calls the macro subroutine
+REM Version 1.11
+subSub1_
+
+sub subSub1_()
+	Dim pageend, pageline, count
+	Dim level1, level2, level3, level4, level5, level6, level7, level8, level9
+	Dim PIS604, PIS608, PIS609, PIS610, PIS001, PIS630, PIS650, PIS660, PIS670, PIS930, PIS940
+	Dim sellprice, i, marketcost
+	
+	PIS604 = 0.5 'price increase strategy - burlington
+	PIS608 = 0 'price increase strategy - montreal
+	PIS609 = 0 'price increase strategy - quebec city
+	PIS001 = 0.5 'price increase strategy - maska
+	PIS610 = 0.5 'price increase strategy - edmonton
+	PIS630 = 0.5 'price increase strategy - vancouver
+	PIS650 = 0 'price increase strategy - regina
+	PIS660 = 0.5 'price increase strategy - kingston
+	PIS670 = 0.2 'price increase strategy - winnipeg
+	PIS930 = 1.0 'price increase strategy - moncton
+	PIS940 = 1.0 'price increase strategy - newfoundland
+
+	pageend = 0
+	pageline = 4
+	count = 0
+	
+	marketcost = ""
+	
+	level1 = ""
+	level2 = ""
+	level3 = ""
+	level4 = ""
+	level5 = ""
+	level6 = ""
+	level7 = ""
+	level8 = ""
+	level9 = ""
+	
+	autECLSession.autECLOIA.WaitForAppAvailable
+	
+	Do while pageend = 0
+		count = count + 1
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SetCursorPos pageline, 002
+		autECLSession.autECLPS.Wait 10
+		
+		if StrComp(autECLSession.autECLPS.GetText(pageline, 004, 1), " ") = 0 then
+			Exit do
+		end if
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "s"
+		autECLSession.autECLPS.Wait 10
+		
+		
+		
+		if pageline = 20 then
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys "[roll up]"
+			autECLSession.autECLPS.Wait 10
+			pageline = 3
+		end if
+		pageline = pageline + 1
+	
+	Loop
+	
+	sellprice = ""
+	count = count-1
+
+	for i = 1 to count
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[enter]"
+		autECLSession.autECLPS.Wait 25
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		sellprice = autECLSession.autECLPS.GetText(12, 055, 6)
+		autECLSession.autECLPS.Wait 25
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SetCursorPos 07, 036
+		autECLSession.autECLPS.Wait 25
+		autECLSession.autECLOIA.WaitForInputReady 
+		autECLSession.autECLPS.SendKeys "[eraseeof]"
+		autECLSession.autECLPS.Wait 25
+		if StrComp(sellprice, "      ") = 0 then
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys sellprice
+			autECLSession.autECLPS.Wait 25
+		else
+			if StrComp(autECLSession.autECLPS.GetText(06, 036, 3), "604") = 0 then
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys sellprice + PIS604
+				autECLSession.autECLPS.Wait 25
+			elseif StrComp(autECLSession.autECLPS.GetText(06, 036, 3), "608") = 0 then
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys sellprice + PIS608
+				autECLSession.autECLPS.Wait 25
+			elseif StrComp(autECLSession.autECLPS.GetText(06, 036, 3), "609") = 0 then
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys sellprice + PIS609
+				autECLSession.autECLPS.Wait 25
+			elseif StrComp(autECLSession.autECLPS.GetText(06, 036, 3), "001") = 0 then
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys sellprice + PIS001
+				autECLSession.autECLPS.Wait 25
+			elseif StrComp(autECLSession.autECLPS.GetText(06, 036, 3), "610") = 0 then
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys sellprice + PIS610
+				autECLSession.autECLPS.Wait 25
+			elseif StrComp(autECLSession.autECLPS.GetText(06, 036, 3), "630") = 0 then
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys sellprice + PIS630
+				autECLSession.autECLPS.Wait 25
+			elseif StrComp(autECLSession.autECLPS.GetText(06, 036, 3), "650") = 0 then
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys sellprice + PIS650
+				autECLSession.autECLPS.Wait 25
+			elseif StrComp(autECLSession.autECLPS.GetText(06, 036, 3), "660") = 0 then
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys sellprice + PIS660
+				autECLSession.autECLPS.Wait 25
+			elseif StrComp(autECLSession.autECLPS.GetText(06, 036, 3), "670") = 0 then
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys sellprice + PIS670
+				autECLSession.autECLPS.Wait 25
+			elseif StrComp(autECLSession.autECLPS.GetText(06, 036, 3), "930") = 0 then
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys sellprice + PIS930
+				autECLSession.autECLPS.Wait 25
+			elseif StrComp(autECLSession.autECLPS.GetText(06, 036, 3), "940") = 0 then
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys sellprice + PIS940
+				autECLSession.autECLPS.Wait 25
+			else
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys sellprice
+				autECLSession.autECLPS.Wait 25
+			end if
+		end if
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SetCursorPos 08, 036
+		autECLSession.autECLPS.Wait 25
+		autECLSession.autECLOIA.WaitForInputReady 
+		autECLSession.autECLPS.SendKeys "[eraseeof]"
+		autECLSession.autECLPS.Wait 25
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys sellprice
+		autECLSession.autECLPS.Wait 25
+		
+		if InStr(sellprice, "-") > 0 then
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 07, 036
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady 
+			autECLSession.autECLPS.SendKeys "[eraseeof]"
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 08, 036
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady 
+			autECLSession.autECLPS.SendKeys "[eraseeof]"
+			autECLSession.autECLPS.Wait 25
+			
+			marketcost = autECLSession.autECLPS.GetText(12, 039, 7)
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 12, 066
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady 
+			autECLSession.autECLPS.SendKeys "[eraseeof]"
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady 
+			autECLSession.autECLPS.SendKeys marketcost
+			autECLSession.autECLPS.Wait 25
+			
+		end if
+		
+				
+		if StrComp(sellprice, "      ") = 0 Or InStr(sellprice, "-") > 0 then
+			autECLSession.autECLOIA.WaitForInputReady
+			level1 = autECLSession.autECLPS.GetText(14, 036, 11)
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 14, 063
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys level1
+			autECLSession.autECLPS.Wait 25
+			
+			autECLSession.autECLOIA.WaitForInputReady
+			level2 = autECLSession.autECLPS.GetText(15, 036, 11)
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 15, 063
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys level2
+			autECLSession.autECLPS.Wait 25
+			
+			autECLSession.autECLOIA.WaitForInputReady
+			level3 = autECLSession.autECLPS.GetText(16, 036, 11)
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 16, 063
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys level3
+			autECLSession.autECLPS.Wait 25
+			
+			autECLSession.autECLOIA.WaitForInputReady
+			level4 = autECLSession.autECLPS.GetText(17, 036, 11)
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 17, 063
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys level4
+			autECLSession.autECLPS.Wait 25
+			
+			autECLSession.autECLOIA.WaitForInputReady
+			level5 = autECLSession.autECLPS.GetText(18, 036, 11)
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 18, 063
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys level5
+			autECLSession.autECLPS.Wait 25
+			
+			autECLSession.autECLOIA.WaitForInputReady
+			level6 = autECLSession.autECLPS.GetText(19, 036, 11)
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 19, 063
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys level6
+			autECLSession.autECLPS.Wait 25
+			
+			autECLSession.autECLOIA.WaitForInputReady
+			level7 = autECLSession.autECLPS.GetText(20, 036, 11)
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 20, 063
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys level7
+			autECLSession.autECLPS.Wait 25
+			
+			autECLSession.autECLOIA.WaitForInputReady
+			level8 = autECLSession.autECLPS.GetText(21, 036, 11)
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 21, 063
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys level8
+			autECLSession.autECLPS.Wait 25
+			
+			autECLSession.autECLOIA.WaitForInputReady
+			level9 = autECLSession.autECLPS.GetText(22, 036, 11)
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SetCursorPos 22, 063
+			autECLSession.autECLPS.Wait 25
+			autECLSession.autECLOIA.WaitForInputReady
+			autECLSession.autECLPS.SendKeys level9
+			autECLSession.autECLPS.Wait 25
+			
+		end if
+		
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[enter]"
+		autECLSession.autECLPS.Wait 25
+		
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[pf12]"
+		autECLSession.autECLPS.Wait 25
+
+		
+		
+		sellprice = ""
+		level1 = ""
+		level2 = ""
+		level3 = ""
+		level4 = ""
+		level5 = ""
+		level6 = ""
+		level7 = ""
+		level8 = ""
+		level9 = ""
+	next
+	
+	
+	MsgBox("Update Complete.")
+end sub
