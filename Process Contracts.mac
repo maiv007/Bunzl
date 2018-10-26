@@ -30,8 +30,8 @@ sub main()
 	reportNumber = rnString
 	datevalue = Month(date)&Day(date)&Year(date)
 	struser = CreateObject("Wscript.Network").username
-	filePath = "C:\Users\" & struser & "\Documents\GitHub\Bunzl\AS400 MACRO CSV\CSV_Process Contracts_TEST.csv"
-	outfile = "C:\Users\" & struser & "\Documents\AS400 MACRO REPORTS\" & "AS400-MSR_" & datevalue & "_" & reportNumber & "_LOADREBATE" & ".csv" 'data dump file
+	filePath = "C:\Users\" & struser & "\Documents\AS400 MACRO CSV\CSV_Process Contracts.csv"
+	outfile = "C:\Users\" & struser & "\Documents\AS400 MACRO REPORTS\" & "AS400-MSR_" & datevalue & "_" & reportNumber & "_LOADREBATE" & ".csv" 'report csv file
 	'**************************
 	
 	'******Calculate file size in ROWS******
