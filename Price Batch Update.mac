@@ -7,9 +7,9 @@ autECLSession.SetConnectionByName(ThisSessionName)
 
 REM This line calls the macro subroutine
 REM Version 1.11
-subSub1_
+main
 
-sub subSub1_()
+sub main()
 	Dim pageend, pageline, count
 	Dim level1, level2, level3, level4, level5, level6, level7, level8, level9
 	Dim PIS604, PIS608, PIS609, PIS610, PIS001, PIS630, PIS650, PIS660, PIS670, PIS930, PIS940
