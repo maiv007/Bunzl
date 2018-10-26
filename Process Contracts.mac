@@ -20,17 +20,18 @@ sub main()
 	Dim dataArray : dataArray = Array()
 	Dim tempString
 	Const ForReading = 1
+	Dim struser 'network username
 
 	Dim objFSO, outfile, objFile 'MSR AS400 script report file variables
 	Dim datevalue, randomNumber, rnString
 	'*******Declarations*******
 	columns = 15
-	username = "jbajcar"
 	Call RndNumber(randomNumber, rnString)
 	reportNumber = rnString
 	datevalue = Month(date)&Day(date)&Year(date)
-	filePath = "C:\Users\" & username & "\Documents\GitHub\Bunzl\AS400 MACRO CSV\CSV_Process Contracts_TEST.csv"
-	outfile = "C:\Users\" & username & "\Documents\AS400 MACRO REPORTS\" & "AS400-MSR_" & datevalue & "_" & reportNumber & "_LOADREBATE" & ".csv" 'data dump file
+	struser = CreateObject("Wscript.Network").username
+	filePath = "C:\Users\" & struser & "\Documents\GitHub\Bunzl\AS400 MACRO CSV\CSV_Process Contracts_TEST.csv"
+	outfile = "C:\Users\" & struser & "\Documents\AS400 MACRO REPORTS\" & "AS400-MSR_" & datevalue & "_" & reportNumber & "_LOADREBATE" & ".csv" 'data dump file
 	'**************************
 	
 	'******Calculate file size in ROWS******
@@ -39,7 +40,7 @@ sub main()
 	ReDim dataArray(rows, columns) 'redefine array based on CSV file size
 	
 	'******Create and initalize MSR Report csv file******
-	Call initializeReport(objFSO, objFile, outfile)
+	Call initializeReport(objFSO, objFile, outfile, struser)
 	
 	'******Load data in CSV file into array******
 	Call CreateFile(aFile, myFile, filePath, objLine) 'reloads in CSV files
@@ -95,13 +96,13 @@ Function LoadData(objLine, dataArray, columns, strInfo, vaMyArray, rows)
 	
 End function
 
-Function initializeReport(objFSO, objFile, outfile)
+Function initializeReport(objFSO, objFile, outfile, struser)
 	'******Create report file*********
 	Set objFSO = CreateObject("Scripting.FileSystemObject")
 	Set objFile = objFSO.CreateTextFile(outFile, True)
 	objFile.Write "******AS400 MACRO SCRIPT REPORT******" & vbCrlf
 	objFile.Write "Script:," & "POD Upload" & vbCrlf
-	objFile.Write "User:," & "CNOABAJCA" & vbCrlf
+	objFile.Write "User:," & struser & vbCrlf
 	objFile.Write "Run Date:," & Month(date) & "/" & Day(date) & "/" & Year(date) & vbCrlf
 	objFile.Write "------------------------------------" & vbCrlf
 	objFile.Write "LOCATION,REBATE NUMBER,REBATE NAME,CONTRACT NUMBER,AS400 BUNZL NUMBER,AS400 COST,AS400 VENDOR PART,VENDOR NUMBER,CSV BUNZL NUMBER,CSV COST ENTERED,CSV VENDOR PART,CSV VENDOR INFO,PENDING,SYSTEM NOTES" & vbCrlf
