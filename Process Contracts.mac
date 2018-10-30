@@ -659,10 +659,12 @@ Function removeRebateLine(location, rebatenumber, vendorpart, vendordesc, bunzln
 End function
 
 Function MacroComplete(successfulItems, exceptionsItems, reportNumber, objFile)
+	Dim finalSummary
+	finalSummary = "Update Complete." & vbCrlf & "Successful lines processed: " & successfulItems & vbCrlf & "Exceptions lines found: " & exceptionsItems & vbCrlf & "Please refer to MSR report number " & reportNumber & "." & vbCrlf
 	objFile.Write "------------------------------------" & vbCrlf
 	objFile.Write "END REPORT" & vbCrlf
 	objFile.Close
-	MsgBox("Update Complete." & vbCrlf & "Successful lines processed: " & successfulItems & vbCrlf & "Exceptions lines found: " & exceptionsItems & vbCrlf & "Please refer to MSR report number " & reportNumber & ".")
+	MsgBox(finalSummary)
 End function
 
 Function MacroFailed()
