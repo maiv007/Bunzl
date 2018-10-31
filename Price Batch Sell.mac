@@ -13,24 +13,26 @@ REM This is the property of Joseph Bajcar. Any unauthorized use will result in l
 main
 
 sub main()
+	Dim count
+	count = 0
 
-
-	Call removeNonApplicableItems()
-	'Call updateBatchPercents()
+	Call removeNonApplicableItems(count)
+	Call updatePrices()
+	Call updateBatchPercents(count)
 	
 	MsgBox("Update Complete.")
 end sub
 
-Function removeNonApplicableItems()
-	Dim pageend, pageline, count
-	Dim mrkCost, vndCost
+Function removeNonApplicableItems(count)
+	Dim pageend, pageline
+	Dim mrkCost, vndCost, currentItem
 
 	pageend = 0
 	pageline = 4
-	count = 0
 
 	mrkCost = ""
 	vndCost = ""
+	currentItem = ""
 	Do while pageend = 0
 		count = count + 1
 		autECLSession.autECLOIA.WaitForInputReady
@@ -41,11 +43,11 @@ Function removeNonApplicableItems()
 			Exit do
 		end if
 
-		autECLSession.autECLPS.Wait 50
+		autECLSession.autECLPS.Wait 25
 		mrkCost = autECLSession.autECLPS.GetText(pageline, 048, 10)
-		autECLSession.autECLPS.Wait 50
+		autECLSession.autECLPS.Wait 25
 		vndCost = autECLSession.autECLPS.GetText(pageline, 021, 10)
-		autECLSession.autECLPS.Wait 50
+		autECLSession.autECLPS.Wait 25
 
 		if StrComp(Replace(mrkCost, " ", ""), "") = 0 And StrComp(Replace(vndCost, " ", ""), "") = 1 then
 			MsgBox("found error item, remove")
@@ -56,9 +58,7 @@ Function removeNonApplicableItems()
 			'autECLSession.autECLPS.SendKeys "[enter]"
 			'autECLSession.autECLPS.Wait 10
 		end if
-
-
-
+		
 		if pageline = 20 then
 			autECLSession.autECLOIA.WaitForInputReady
 			autECLSession.autECLPS.SendKeys "[roll up]"
@@ -68,10 +68,23 @@ Function removeNonApplicableItems()
 		pageline = pageline + 1
 
 	Loop
+
+	autECLSession.autECLOIA.WaitForInputReady
+	autECLSession.autECLPS.SendKeys "[pf12]"
+	autECLSession.autECLPS.Wait 50
+
+	autECLSession.autECLOIA.WaitForInputReady
+	autECLSession.autECLPS.SendKeys "[enter]"
+	autECLSession.autECLPS.Wait 50
+
 End Function
 
-Function updateBatchPercents()
-	Dim pageend, pageline, count
+Function updatePrices()
+
+End Function
+
+Function updateBatchPercents(count)
+	Dim pageend, pageline, currentItem, pageCount
 	Dim level1, level2, level3, level4, level5, level6, level7, level8, level9
 	Dim PIS604, PIS608, PIS609, PIS610, PIS001, PIS630, PIS650, PIS660, PIS670, PIS930, PIS940
 	Dim sellprice, i, marketcost
@@ -90,9 +103,10 @@ Function updateBatchPercents()
 
 	pageend = 0
 	pageline = 4
-	count = 0
+	pageCount = 0
 
 	marketcost = ""
+	currentItem = ""
 
 	level1 = ""
 	level2 = ""
@@ -107,7 +121,21 @@ Function updateBatchPercents()
 	autECLSession.autECLOIA.WaitForAppAvailable
 
 	Do while pageend = 0
-		count = count + 1
+		autECLSession.autECLOIA.WaitForInputReady
+		autECLSession.autECLPS.SendKeys "[roll up]"
+		autECLSession.autECLPS.Wait 10
+		pageCount = pageCount + 1
+		if StrComp(Replace(autECLSession.autECLPS.GetText(04, 004, 9), " ",""), "") = 0 then
+			for i = 0 to pageCount-1
+				autECLSession.autECLOIA.WaitForInputReady
+				autECLSession.autECLPS.SendKeys "[roll down]"
+				autECLSession.autECLPS.Wait 10
+			next
+			Exit do
+		end if
+	Loop
+
+	Do while pageend = 0
 		autECLSession.autECLOIA.WaitForInputReady
 		autECLSession.autECLPS.SetCursorPos pageline, 002
 		autECLSession.autECLPS.Wait 10
@@ -133,7 +161,6 @@ Function updateBatchPercents()
 	Loop
 
 	sellprice = ""
-	count = count-1
 
 	for i = 1 to count
 		autECLSession.autECLOIA.WaitForInputReady
