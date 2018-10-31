@@ -239,7 +239,7 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 						autECLSession.autECLOIA.WaitForInputReady
 						autECLSession.autECLPS.SendKeys "[enter]"
 						autECLSession.autECLPS.Wait 50
-						Call addRebateLine(location, rebatenumber, bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
+						Call addRebateLine(location, rebatenumber, rebatename,bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
 						'if item comes back with a system message then item failed to add
 						if failCheck = 1 then
 							exceptionsItems = exceptionsItems + 1
@@ -248,7 +248,7 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 						end if
 						failCheck = 0
 					else
-						Call addRebateLine(location, rebatenumber, bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
+						Call addRebateLine(location, rebatenumber, rebatename,bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
 						'if item comes back with a system message then item failed to add
 						if failCheck = 1 then
 							exceptionsItems = exceptionsItems + 1
@@ -258,7 +258,7 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 						failCheck = 0
 					end if
 				else
-					Call addRebateLine(location, rebatenumber, bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
+					Call addRebateLine(location, rebatenumber, rebatename,bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
 					'if item comes back with a system message then item failed to add
 					if failCheck = 1 then
 						exceptionsItems = exceptionsItems + 1
@@ -268,7 +268,7 @@ Function RunMacro(dataArray, rows, columns, objFile, reportNumber)
 					failCheck = 0
 				end if
 			else
-				Call addRebateLine(location, rebatenumber, bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
+				Call addRebateLine(location, rebatenumber, rebatename,bunzlnumber, optionD, option1, option2, price, effdate, expdate, vendornumber, contractnumber, optPending, failCheck, objFile, vendorpart, vendordesc)
 				'if item comes back with a system message then item failed to add
 				if failCheck = 1 then
 					exceptionsItems = exceptionsItems + 1
@@ -659,10 +659,13 @@ Function removeRebateLine(location, rebatenumber, vendorpart, vendordesc, bunzln
 End function
 
 Function MacroComplete(successfulItems, exceptionsItems, reportNumber, objFile)
+	Dim finalSummary
+	finalSummary = "Update Complete." & vbCrlf & "Successful lines processed: " & successfulItems & vbCrlf & "Exceptions lines found: " & exceptionsItems & vbCrlf & "Please refer to MSR report number " & reportNumber & "." & vbCrlf
 	objFile.Write "------------------------------------" & vbCrlf
+	objFile.Write finalSummary
 	objFile.Write "END REPORT" & vbCrlf
 	objFile.Close
-	MsgBox("Update Complete." & vbCrlf & "Successful lines processed: " & successfulItems & vbCrlf & "Exceptions lines found: " & exceptionsItems & vbCrlf & "Please refer to MSR report number " & reportNumber & ".")
+	MsgBox(finalSummary)
 End function
 
 Function MacroFailed()
