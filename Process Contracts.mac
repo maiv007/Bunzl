@@ -642,7 +642,7 @@ Function removeRebateLine_Simple()
 End function
 
 
-Function removeRebateLine(location, rebatenumber, vendorpart, vendordesc, bunzlnumber, objFile)
+Function removeRebateLine(location, rebatenumber, rebatename, vendorpart, vendordesc, bunzlnumber, objFile)
 	autECLSession.autECLPS.Wait 50
 	objFile.Write location & "," & rebatenumber & "," & rebatename & "," & autECLSession.autECLPS.GetText(08, 021, 15) & "," & autECLSession.autECLPS.GetText(07, 008, 9) & "," & autECLSession.autECLPS.GetText(07, 043, 11) & "," & autECLSession.autECLPS.GetText(07, 021, 15) & "," & autECLSession.autECLPS.GetText(07, 073, 6) & "," & bunzlnumber & "," & " " & "," & vendorpart & "," & vendordesc & "," & "," & "item removed" & vbCrlf
 
