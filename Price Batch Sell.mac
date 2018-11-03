@@ -13,10 +13,28 @@ REM This is the property of Joseph Bajcar. Any unauthorized use will result in l
 main
 
 sub main()
-
+	'*******Variables*******
+	Dim aFile, myFile, filePath
+	Dim objFSO, outfile, objFile 'data dump file variables
+	Dim datevalue, randomNumber, rnString
+	Dim company
+	Dim vaMyArray, objLine, strInfo, x, y
+	Dim arraySize, rows, columns
+	Dim dataArray : dataArray = Array()
+	Dim tempString
+	Const ForReading = 1
+	'*******Declarations*******
+	columns = 3
+	filePath = "C:\Users\jbajcar\Documents\AS400 MACRO CSV\CSV_Price Batch.csv"
+	'**************************
+	
+	'******Calculate file size in ROWS******
+	Call CreateFile(aFile, myFile, filePath, objLine) 'load in CSV file
+	Call FindFileSize(rows, objLine, strInfo, tempString) 'calls function to calculate number of rows in CSV file
+	ReDim dataArray(rows, columns) 'redefine array based on CSV file size
 
 	Call removeNonApplicableItems()
-	'Call updateBatchPercents()
+	Call updateBatchPercents()
 	
 	MsgBox("Update Complete.")
 end sub
@@ -359,3 +377,37 @@ Function updateBatchPercents()
 	next
 
 End Function
+
+Function CreateFile(aFile, myFile, filePath, objLine)
+	Set aFile = CreateObject("Scripting.FileSystemObject") 'create file object
+	Set myFile = aFile.GetFile(filePath) 'create file object with CSV file
+	Set objLine = myFile.OpenAsTextStream(1) 'create object to stream data from CSV file
+End function
+
+Function FindFileSize(rows, objLine, strInfo, tempString)
+	rows = 0
+	Do while objLine.AtEndOfStream <> true 'read file until null pointer, end of file/data
+		strInfo = objLine.ReadLine
+		tempString = Split(strInfo,",")
+		if StrComp(tempString(1), " ") = -1 then 'checks to see if the cell is blank and stops ReadIn stream
+			Exit do
+		end if
+		rows = rows + 1
+	Loop
+	rows = rows - 1
+End function
+
+Function LoadData(objLine, dataArray, columns, strInfo, vaMyArray, rows)
+	Dim x,y
+	x = 0
+	Do while objLine.AtEndOfStream <> true 'read file until null pointer, end of file/data
+		strInfo =   objLine.ReadLine
+		vaMyArray = Split(strInfo, ",")
+		For y = 0 to columns-1
+			dataArray(x, y) = vaMyArray(y)
+		Next
+		if x >= rows then exit do
+		x = x + 1
+	Loop
+	
+End function
